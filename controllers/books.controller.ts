@@ -101,6 +101,7 @@ export const createbook = catchAsyncError(
           Pages: data.Pages,
           price: data.price,
           docType: data.docType,
+          status: data.status,
           copies: [],
           totalcopies: totalcopies,
           availablecopies: availablecopies,
@@ -119,6 +120,7 @@ export const createbook = catchAsyncError(
               i,
               bookNo
             ),
+            status: "Available",
           });
           totalcopies++;
           availablecopies++;
@@ -245,7 +247,7 @@ export const searchBookByISBN = catchAsyncError(
         if (books.length > 0) {
           res.status(200).json({
             status: "success",
-            message:`${books.length} records Found`,
+            message: `${books.length} records Found`,
             results: books,
           });
         } else {
@@ -267,25 +269,70 @@ export const searchBookBycode = catchAsyncError(
     try {
       const { bookId } = req.body;
       if (bookId) {
-        const book = await booksModel.findOne({ bookId: bookId }).populate("copies");
+        const book = await booksModel
+          .findOne({ bookId: bookId })
+          .populate("copies");
         if (book) {
           const books = [book, ...book.copies];
-        if (books.length > 0) {
-          res.status(200).json({
-            status: "success",
-            message:`${books.length} records Found`,
-            results: books,
-          });
+          if (books.length > 0) {
+            res.status(200).json({
+              status: "success",
+              message: `${books.length} records Found`,
+              results: books,
+            });
+          } else {
+            res.status(400).json({
+              status: "fail",
+              message: "No Book by this Code found",
+            });
+          }
         } else {
-          res.status(400).json({
-            status: "fail",
-            message: "No Book by this Code found",
-          });
+          throw new ErrorHandler("No Book Code provided", 400);
         }
-      } else {
-        throw new ErrorHandler("No Book Code provided", 400);
       }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
     }
+  }
+);
+
+//delete Books
+export const deleteBook = catchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { bookId } = req.body;
+      const deletedBook = await booksModel.findOneAndDelete({ bookId: bookId });
+      if (deletedBook) {
+        res.status(200).json({
+          status: "success",
+          message: "Book deleted successfully",
+        });
+      } else {
+        throw new ErrorHandler("Book not found", 400);
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+//Get all Books from DB
+export const getAllBooks = catchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const books = await booksModel.find();
+      if (books.length > 0) {
+        res.status(200).json({
+          status: "success",
+          message: `${books.length} records Found`,
+          results: books,
+        });
+      } else {
+        res.status(400).json({
+          status: "fail",
+          message: "No books found",
+        });
+      }
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
     }

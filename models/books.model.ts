@@ -16,6 +16,7 @@ export interface IBook {
   Pages: number;
   price: number;
   docType: string;
+  status : string;
   copies: ICopy[];
   totalcopies: number;
   availablecopies: number;
@@ -25,6 +26,7 @@ export interface IBook {
 export interface ICopy {
   bookNo: string;
   accessionCode: string;
+  status : string;
 }
 
 export const BookSchema: Schema = new Schema({
@@ -41,10 +43,12 @@ export const BookSchema: Schema = new Schema({
   Pages: { type: Number, required: false },
   price: { type: Number, required: false },
   docType: { type: String, required: false },
+  status : {type: String, required: false},
   copies: [
     {
       bookNo: { type: String, required: false, unique: true },
       accessionCode: { type: String, required: false, unique: true },
+      status : {type: String, required: false},
     },
   ],
   totalcopies: { type: Number, required: false },
