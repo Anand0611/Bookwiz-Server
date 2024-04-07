@@ -2,6 +2,7 @@ require("dotenv").config();
 import mongoose, { Document, Model, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { ICopy } from "./books.model";
 
 const emailRegrexPattern: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,6 +24,7 @@ export interface Iuser extends Document {
   country: string;
   pincode: string;
   dateOfBirth: Date;
+  noofBooks: number;
 
   joinDate: Date;
   studentID: String;
@@ -38,6 +40,8 @@ export interface Iuser extends Document {
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
 }
+
+
 
 const userSchema: Schema<Iuser> = new mongoose.Schema(
   {
@@ -111,7 +115,8 @@ const userSchema: Schema<Iuser> = new mongoose.Schema(
     joinDate: {
       type: Date,
     },
-
+    noofBooks: { type: Number, required: true, default: 0 },
+    
     staffID: {
       type: String,
       unique: true,

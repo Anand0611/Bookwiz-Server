@@ -12,10 +12,15 @@ export interface IbookBorrow extends Document {
   isReturned: boolean;
 }
 
-export function generateborrowid() {
-  const randomNumber = Math.floor(Math.random() * 90000) + 10000;
-  const bookId = "BR" + randomNumber.toString();
-  return bookId;
+export async function generateborrowid(): Promise<string> {
+  //get the number of records in the borrow db
+  const count = await BorrowModel.estimatedDocumentCount();
+  const currentYear = new Date().getFullYear();
+  const Year2Digit = currentYear.toString().slice(-2);
+  const borrowid =
+    "B" + "." + String(Year2Digit) + ":" + String(count).padStart(6, "0");
+
+  return borrowid;
 }
 
 const bookBorrowSchema = new Schema<IbookBorrow>({
@@ -45,13 +50,11 @@ bookBorrowSchema.pre("save", async function (next) {
 
   const book = await BookModel.findById(this.book_id);
 
-  if (book) {
-    if (book.available_copies != 0) {
-      book.available_copies -= 1;
-      book.borrowed_copies += 1;
-    } else {
-      throw new Error("The book is not available");
-    }
+  if (!book) {
+    throw new Error("Book not found");
+  }
+  if (book.availablecopies < 1) {
+    throw new Error("Book not available");
   }
 });
 
@@ -59,4 +62,5 @@ const BorrowModel: Model<IbookBorrow> = mongoose.model(
   "Borrow",
   bookBorrowSchema
 );
+
 export default BorrowModel;

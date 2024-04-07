@@ -1,52 +1,66 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response } from "express-serve-static-core";
 import { CatchAsyncError } from "../middleware/catchAsyncErrors";
-import ErrorHandler from "../utils/ErrorHandler";
-import { bookBorrow, getAllUserBorrows } from "../services/borrow.service";
-import BookModel from "../models/books.model";
+import userModel from "../models/user.model";
+import booksModel, { BookSchema } from "../models/books.model";
+import BorrowModel, { generateborrowid } from "../models/borrow.model";
 
 export const borrowBook = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const data = req.body;
-      console.log(data);
-    
-      const book = await BookModel.findById({ book_id: data.bookId });
+    const { bookId, userId } = req.body;
+    const currentDate = new Date();
+    const dueDate = new Date(currentDate.getTime() + 20 * 24 * 60 * 60 * 1000);
 
-      if (data) {
-        if (book && book.available_copies > 0) {
-          bookBorrow(data, res, next);
-          res.status(201).json({
-            status: "success",
-            message: "Successfully Borrowed",
-            data: data,
-          });
-        } else {
-          throw new ErrorHandler("This book is not available", 409);
-        }
-      }
-      if (book) {
-        book.borrowed_copies++;
-        book.available_copies--;
-        await book?.save();
-      }
-    } catch (error: any) {
-      return next(new ErrorHandler(error.message, 400));
-    }
-  }
-);
+    //find user and book detiails
+    const user = await userModel.findOne({
+      studentID: userId,
+      staffID: userId,
+    });
+    const book = await booksModel.findOne({ bookId: bookId });
+    const isbookavailable = book?.status === "available" ? true : false;
+    const isuserverified = user?.isverified === true ? true : false;
 
-export const getUserBorrows = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const data = req.body;
-      if (data.user_id) {
-        getAllUserBorrows(data.user_id, res);
-      }
+    if (!isbookavailable) {
+      res.status(400).json({
+        status: "fail",
+        message: "Book is not available",
+      });
+    } else if (!isuserverified) {
+      res.status(400).json({
+        status: "fail",
+        message: "User is not verified",
+      });
+    } else if (user && user.noofBooks >= 5) {
+      res.status(400).json({
+        status: "fail",
+        message: "User can't borrow more than 5 books",
+      });
+    } else if (user && book) {
+      user.noofBooks = user.noofBooks + 1;
+      book.status = "borrowed";
+      book.availablecopies = book.availablecopies - 1;
+      user.save();
+      book.save();
       res.status(200).json({
         status: "success",
+        message: "Book borrowed successfully",
       });
-    } catch (error: any) {
-      return next(new ErrorHandler(error.message, 400));
+      const newBorrow = await BorrowModel.create({
+        borrow_id: generateborrowid(),
+        user_id: userId,
+        book_id: bookId,
+        book_title: book.title,
+        borrow_date: currentDate,
+        due_date: dueDate,
+        fine_amount: 0,
+        isReturned: false,
+      });
+      if (newBorrow) {
+        res.status(200).json({
+          status: "success",
+          message: "Book borrowed successfully",
+          results: newBorrow,
+        });
+      }
     }
   }
 );
