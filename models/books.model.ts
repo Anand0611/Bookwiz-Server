@@ -1,6 +1,7 @@
 // interface for book detials
 
 import mongoose, { Model, Schema } from "mongoose";
+import { reserveBook } from "../controllers/bookBorrow.controller";
 
 export interface IBook {
   bookId: string;
@@ -16,17 +17,19 @@ export interface IBook {
   Pages: number;
   price: number;
   docType: string;
-  status : string;
+  status: string;
   copies: ICopy[];
   totalcopies: number;
   availablecopies: number;
   borrowedcopies: number;
+  reservedBy: string;
 }
 
 export interface ICopy {
   bookNo: string;
   accessionCode: string;
-  status : string;
+  status: string;
+  reservedBy: string;
 }
 
 export const BookSchema: Schema = new Schema({
@@ -43,12 +46,14 @@ export const BookSchema: Schema = new Schema({
   Pages: { type: Number, required: false },
   price: { type: Number, required: false },
   docType: { type: String, required: false },
-  status : {type: String, required: false},
+  status: { type: String, required: false },
+  reservedBy: { type: String, default: "" },
   copies: [
     {
       bookNo: { type: String, required: false, unique: true },
       accessionCode: { type: String, required: false, unique: true },
-      status : {type: String, required: false},
+      status: { type: String, required: false },
+      reservedBy: { type: String, default: "" },
     },
   ],
   totalcopies: { type: Number, required: false },
@@ -56,10 +61,10 @@ export const BookSchema: Schema = new Schema({
   borrowedcopies: { type: Number, required: false },
 });
 
-export interface IBookModel extends Model<IBook>{
-  findByTitle(title: string) : Promise<IBook[]>;
-  findByAuthor(author: string) : Promise<IBook[]>;
-  updateBook(book: IBook) : Promise<IBook[]>;
-  deleteBook(id: string) : Promise<IBook[]>;
+export interface IBookModel extends Model<IBook> {
+  findByTitle(title: string): Promise<IBook[]>;
+  findByAuthor(author: string): Promise<IBook[]>;
+  updateBook(book: IBook): Promise<IBook[]>;
+  deleteBook(id: string): Promise<IBook[]>;
 }
 export default mongoose.model<IBook>("Book", BookSchema);

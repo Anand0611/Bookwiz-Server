@@ -7,6 +7,7 @@ export interface IbookBorrow extends Document {
   book_id: string;
   book_title: string;
   borrow_date: Date;
+  renew_count: number;
   due_date: Date;
   fine_amount: number;
   isReturned: boolean;
@@ -29,6 +30,7 @@ const bookBorrowSchema = new Schema<IbookBorrow>({
   book_id: { type: String, required: true },
   book_title: { type: String, required: false },
   borrow_date: { type: Date, default: Date.now() },
+  renew_count: {type: Number, default: 0},
   due_date: {
     type: Date,
     default: () => Date.now() + 10 * 24 * 60 * 60 * 1000 /*10 days*/,

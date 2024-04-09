@@ -4,7 +4,6 @@ import booksModel, { IBook } from "../models/books.model";
 import ErrorHandler from "../utils/ErrorHandler";
 import fs from "fs";
 
-
 const bookNoFilePath = "./BookNo.txt";
 
 async function generateBookNo(currentBookNo: string): Promise<string> {
@@ -103,6 +102,7 @@ export const createbook = catchAsyncError(
           docType: data.docType,
           status: data.status,
           copies: [],
+          reservedBy: "",
           totalcopies: totalcopies,
           availablecopies: availablecopies,
           borrowedcopies: totalcopies - availablecopies,
@@ -120,6 +120,7 @@ export const createbook = catchAsyncError(
               i,
               bookNo
             ),
+            reservedBy: "",
             status: "Available",
           });
           totalcopies++;
