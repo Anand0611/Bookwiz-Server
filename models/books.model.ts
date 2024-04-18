@@ -46,7 +46,7 @@ export const BookSchema: Schema = new Schema({
   Pages: { type: Number, required: false },
   price: { type: Number, required: false },
   docType: { type: String, required: false },
-  status: { type: String, required: false },
+  status: { type: String, default: "available", required: false },
   reservedBy: { type: String, default: "" },
   copies: [
     {

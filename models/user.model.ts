@@ -24,7 +24,9 @@ export interface Iuser extends Document {
   country: string;
   pincode: string;
   dateOfBirth: Date;
-  noofBooks: number;
+  totalnoofBooks: number;
+  booksinhand:number;
+  duedate:Date;
 
   joinDate: Date;
   studentID: String;
@@ -34,14 +36,13 @@ export interface Iuser extends Document {
   designation: String;
 
   isverified: boolean;
+  isProfileUpdated: boolean;
   isMember: boolean;
   Fineamnt: Number;
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
 }
-
-
 
 const userSchema: Schema<Iuser> = new mongoose.Schema(
   {
@@ -52,6 +53,7 @@ const userSchema: Schema<Iuser> = new mongoose.Schema(
     firstName: {
       type: String,
       required: [true, "Please enter your First Name"],
+      indexes: false,
     },
     lastName: {
       type: String,
@@ -79,6 +81,7 @@ const userSchema: Schema<Iuser> = new mongoose.Schema(
     role: {
       type: String,
       default: "user",
+      indexes: false,
     },
     phone_no: {
       type: String,
@@ -104,7 +107,6 @@ const userSchema: Schema<Iuser> = new mongoose.Schema(
     },
     studentID: {
       type: String,
-      unique: true,
     },
     course: {
       type: String,
@@ -115,17 +117,23 @@ const userSchema: Schema<Iuser> = new mongoose.Schema(
     joinDate: {
       type: Date,
     },
-    noofBooks: { type: Number, required: true, default: 0 },
-    
+    totalnoofBooks: { type: Number, required: true, default: 0 },
+    booksinhand: { type: Number, required: true, default: 0 },
+    duedate : {type:Date},
+
     staffID: {
       type: String,
-      unique: true,
     },
     designation: {
       type: String,
     },
 
     isverified: {
+      type: Boolean,
+      default: false,
+    },
+
+    isProfileUpdated: {
       type: Boolean,
       default: false,
     },
@@ -166,7 +174,7 @@ userSchema.pre<Iuser>("save", async function (next) {
 //Sign Access Token - To create access token when user login
 userSchema.methods.SignAccessToken = function () {
   return jwt.sign({ id: this._id }, process.env.ACCESS_TOKEN || "", {
-    expiresIn: "5m",
+    expiresIn: "3d",
   });
 };
 

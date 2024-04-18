@@ -16,6 +16,7 @@ import {
 } from "../utils/jwt";
 import { getUserById } from "../services/user.service";
 import cloudinary from "cloudinary";
+import mongoose from "mongoose";
 
 //register user
 interface IRegistrationBody {
@@ -158,6 +159,7 @@ export const loginUser = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body as ILoginRequest;
+      // console.log(email, password);
 
       if (!email || !password) {
         return next(new ErrorHandler("Please provide email and password", 400));
@@ -227,7 +229,7 @@ export const updateAccessToken = CatchAsyncError(
       const accessToken = jwt.sign(
         { id: user._id },
         process.env.ACCESS_TOKEN as string,
-        { expiresIn: "10m" }
+        { expiresIn: "3d" }
       );
 
       const refreshToken = jwt.sign(
@@ -302,10 +304,12 @@ interface userProfile {
   state?: string;
   country?: string;
   pin?: string;
-  dateOfbirth: Date;
-  userType: string;
+  dateOfBirth: Date;
+  UserType: string;
   studentID: string;
   course: string;
+  isAdmin: boolean;
+  isProfileUpdated: boolean;
   department: string;
   joinDate: Date;
   designation: string;
@@ -348,15 +352,19 @@ export const completeProfile = CatchAsyncError(
         state,
         country,
         pin,
-        dateOfbirth,
-        userType,
+        dateOfBirth,
+        UserType,
+        isAdmin,
+        isProfileUpdated,
         course,
         department,
         designation,
         joinDate,
       } = req.body as userProfile;
-      const userId = req.user?._id;
-      const user = await userModel.findById(userId);
+      const user = await userModel.findOne({ email: email });
+      const userid = user?._id;
+      // console.log(userid);
+      // console.log(req.body);
 
       if (firstName && user) {
         user.firstName = firstName;
@@ -366,11 +374,17 @@ export const completeProfile = CatchAsyncError(
       }
 
       if (email && user) {
-        const isEmailExist = await userModel.findOne({ email });
+        const isEmailExist = await userModel.findOne({ email: email });
         if (isEmailExist) {
-          return next(new ErrorHandler("Email is already in use.", 400));
+          user.email = email;
         }
         user.email = email;
+      }
+      if (isAdmin && user) {
+        user.role = "Admin";
+      }
+      if (isProfileUpdated && user) {
+        user.isProfileUpdated = true;
       }
       if (avatar && user) {
         user.avatar.public_id = avatar.public_id;
@@ -395,31 +409,48 @@ export const completeProfile = CatchAsyncError(
         user.pincode = pin;
       }
 
-      if (dateOfbirth && user) {
-        user.dateOfBirth = dateOfbirth;
+      if (dateOfBirth && user) {
+        user.dateOfBirth = dateOfBirth;
       }
-      if (user && userType === "Student") {
-        if (user.studentID === "") {
-          user.studentID = generateStudentId(course);
+
+      if (user && UserType === "Student") {
+        if (user.studentID === undefined) {
+          let id = generateStudentId(course);
+          let Student = await userModel.findOne({ studentID: id });
+          while (Student) {
+            id = generateStudentId(course);
+            Student = await userModel.findOne({ studentID: id });
+          }
+          user.studentID = id;
         }
-        user.course = course;
-        user.department = department;
-        user.joinDate = joinDate;
-      }
-
-      if (user && userType === "Staff") {
-        if (user.staffID === "") {
-          user.staffID = generateStaffId();
+        if (user.isProfileUpdated === false) {
+          user.course = course;
+          user.department = department;
+          user.joinDate = joinDate;
         }
-
-        user.designation = designation;
-        user.department = department;
-        user.joinDate = joinDate;
       }
 
+      if (user && UserType === "Staff") {
+        // console.log(user.staffID);
+        if (user.staffID == undefined) {
+          let id = generateStaffId();
+          let Staff = await userModel.findOne({ staffID: id });
+          while (Staff) {
+            id = generateStaffId();
+            Staff = await userModel.findOne({ staffID: id });
+          }
+          user.staffID = id;
+          // console.log(id);
+        }
+        if (user.isProfileUpdated === false) {
+          user.designation = designation;
+          user.department = department;
+          user.joinDate = joinDate;
+        }
+      }
+      console.log(user);
       await user?.save();
-
-      await redis.set(userId, JSON.stringify(user));
+      await redis.set(userid, JSON.stringify(user));
 
       res.status(201).json({
         success: true,
@@ -530,31 +561,31 @@ export const updateProfilePicture = CatchAsyncError(
 interface ImakeAdmin {
   adminCode: string;
 }
-export const makeUserAdmin = CatchAsyncError(async (req:Request, res:Response, next:NextFunction) => {
-  try {
+export const makeUserAdmin = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { adminCode } = req.body as ImakeAdmin;
+      const user_id = req.user?._id;
 
-    const { adminCode } = req.body as ImakeAdmin;
-    const user_id = req.user?._id;
+      const user = await userModel.findById(user_id);
 
-    const user = await userModel.findById(user_id);
-
-    if (user) {
-      if (adminCode === process.env.ADMIN_CODE) {
-        user.role = "Admin";
-        await user.save();
-        await redis.set(user_id, JSON.stringify(user));
-        res.status(200).json({
-          success: true,
-          user,
-        });
+      if (user) {
+        if (adminCode === process.env.ADMIN_CODE) {
+          user.role = "Admin";
+          await user.save();
+          await redis.set(user_id, JSON.stringify(user));
+          res.status(200).json({
+            success: true,
+            user,
+          });
+        } else {
+          return next(new ErrorHandler("Invalid Admin Code", 400));
+        }
       } else {
-        return next(new ErrorHandler("Invalid Admin Code", 400));
+        return next(new ErrorHandler("User does not exist", 400));
       }
-    } else {
-      return next(new ErrorHandler("User does not exist", 400));
+    } catch (error: any) {
+      return next(new ErrorHandler("Unable to make user admin", 500));
     }
-    
-  } catch (error:any) {
-    return next(new ErrorHandler("Unable to make user admin", 500));
   }
-})
+);

@@ -129,6 +129,10 @@ export const createbook = catchAsyncError(
           newBook.availablecopies = availablecopies;
           newBook.borrowedcopies = totalcopies - availablecopies;
         }
+        const isISBN  = await booksModel.findOne(newBook);
+        if(isISBN){
+          throw new ErrorHandler("Book already exists", 400);
+        }
 
         const savedBook = await booksModel.create(newBook);
         await fs.promises.writeFile(bookNoFilePath, bookNo);

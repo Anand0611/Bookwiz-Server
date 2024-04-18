@@ -26,11 +26,19 @@ userRouter.get("/logout", isAutheticated, logoutUser);
 userRouter.get("/refresh", updateAccessToken);
 userRouter.get("/me", isAutheticated, getUserInfo);
 userRouter.post("/social-auth", socialAuth);
-userRouter.put("/make-admin", isAutheticated,makeUserAdmin);
+userRouter.put("/make-admin", updateAccessToken, isAutheticated, makeUserAdmin);
 userRouter.put("/update-user-info", isAutheticated, completeProfile);
-userRouter.put("/update-user-password", isAutheticated, updatePassword);
-userRouter.put("/update-user-avatar", isAutheticated, updateProfilePicture);
-
-
+userRouter.put(
+  "/update-user-password",
+  updateAccessToken,
+  isAutheticated,
+  updatePassword
+);
+userRouter.put(
+  "/update-user-avatar",
+  updateAccessToken,
+  isAutheticated,
+  updateProfilePicture
+);
 
 export default userRouter;
